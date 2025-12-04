@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Tính Ngày Giảm Giá</title>
+<style>
+    body { font-family: Arial, sans-serif; background:#f7f7f7; padding:20px; }
+    .container { max-width:700px; margin:auto; background:#fff; padding:20px; border-radius:10px; box-shadow:0 0 10px #ccc; }
+    h2 { text-align:center; }
+    label { font-weight:bold; display:block; margin-top:15px; }
+    select, input { width:100%; padding:10px; margin-top:5px; box-sizing:border-box; }
+    .row { display:flex; gap:10px; }
+    .row > * { flex:1; }
+    button { margin-top:12px; padding:12px; width:100%; background:#007bff; color:white; border:none; border-radius:5px; font-size:16px; cursor:pointer; }
+    button:hover { background:#0056b3; }
+    #copyBtn { background:#28a745; }
+    #copyBtn:hover { background:#1e7e34; }
+    #result { margin-top:20px; padding:15px; background:#eef; border-radius:8px; white-space:pre-line; font-size:16px; min-height:56px; }
+    .note { font-size:13px; color:#555; margin-top:8px; }
+    .small { font-size:13px; }
+</style>
+</head>
+<body>
+<div class="container">
+    <h2>TÍNH NGÀY GIẢM GIÁ</h2>
+
+    <label>Chọn kiểu nhập liệu:</label>
+    <select id="inputType" onchange="showFields()">
+        <option value="ns_hsd">Ngày sản xuất + Số ngày hạn sử dụng</option>
+        <option value="ns_nhh">Ngày sản xuất + Ngày hết hạn</option>
+        <option value="nhh_hsd">Ngày hết hạn + Số ngày hạn sử dụng</option>
+    </select>
+
+    <div id="field_ns" style="display:block;">
+        <label>Ngày sản xuất:</label>
+        <input type="date" id="ngaySX" />
+    </div>
+
+    <div id="field_hsd" style="display:block;">
+        <label>Số ngày hạn sử dụng:</label>
+        <input type="number" id="soHSD" min="1" step="1" />
+    </div>
+
+    <div id="field_nhh" style="display:none;">
+        <label>Ngày hết hạn:</label>
+        <input type="date" id="ngayHH" />
+    </div>
+
+    <div class="row">
+      <button onclick="tinhToan()">Tính ngày giảm giá</button>
+      <button id="copyBtn" onclick="copyResult()" title="Sao chép kết quả (nếu trình duyệt cho phép)">Copy kết quả</button>
+    </div>
+
+    <div id="result"></div>
+    <div class="note">Ghi chú: Nếu môi trường (sandbox) chặn quyền truy cập clipboard, nút "Copy kết quả" sẽ cố gắng sao chép bằng nhiều cơ chế. Nếu không thành công, văn bản kết quả sẽ được bôi đậm để bạn có thể dùng Ctrl+C để sao chép thủ công.</div>
+</div>
+
+<script>
+(function(){ showFields(); })();
+
+function showFields() {
+    const type = document.getElementById("inputType").value;
+
+    document.getElementById("field_ns").style.display = type !== "nhh_hsd" ? "block" : "none";
+    document.getElementById("field_hsd").style.display = type !== "ns_nhh" ? "block" : "none";
+    document.getElementById("field_nhh").style.display = type !== "ns_hsd" ? "block" : "none";
+}
+
+function parseDate(str){
+    if(!str) return null;
+    const d = new Date(str + "T00:00:00");
+    return isNaN(d.getTime()) ? null : d;
+}
+
+function addDays(date, days){ let d=new Date(date); d.setDate(d.getDate()+days); d.setHours(0,0,0,0); return d; }
+
+function format(date){ if(!date) return ''; return date.toLocaleDateString('vi-VN'); }
+
+function setResult(text){
+    const el = document.getElementById('result');
+    el.innerText = text;
+    // Make it selectable for manual copy
+    el.style.userSelect = 'text';
+}
+
+function tinhToan() {
+    const type = document.getElementById("inputType").value;
+    let ngaySX=null, ngayHH=null, hsd=null;
+
+    if(type === "ns_hsd"){
+        ngaySX = parseDate(document.getElementById("ngaySX").value);
+        hsd = parseInt(document.getElementById("soHSD").value, 10);
+        if(!ngaySX || isNaN(hsd)) { setResult('Vui lòng nhập đầy đủ và đúng thông tin'); return; }
+        ngayHH = addDays(ngaySX, hsd - 1);
+    }
+    else if(type === "ns_nhh"){
+        ngaySX = parseDate(document.getElementById("ngaySX").value);
+        ngayHH = parseDate(document.getElementById("ngayHH").value);
+        if(!ngaySX || !ngayHH) { setResult('Vui lòng nhập đầy đủ và đúng thông tin'); return; }
+        // hsd = (ngayHH - ngaySX) / 1 day + 1
+        const diff = Math.round((ngayHH.getTime() - ngaySX.getTime())/(1000*3600*24));
+        hsd = diff + 1;
+    }
+    else if(type === "nhh_hsd"){
+        ngayHH = parseDate(document.getElementById("ngayHH").value);
+        hsd = parseInt(document.getElementById("soHSD").value, 10);
+        if(!ngayHH || isNaN(hsd)) { setResult('Vui lòng nhập đầy đủ và đúng thông tin'); return; }
+        ngaySX = addDays(ngayHH, -(hsd - 1));
+    }
+
+    if(!ngayHH || !hsd || hsd < 1){
+        setResult('Vui lòng nhập đầy đủ và đúng thông tin');
+        return;
+    }
+
+    // today's date at midnight
+    const today = new Date(); today.setHours(0,0,0,0);
+    if(ngayHH.getTime() < today.getTime()){
+        setResult('Sản phẩm đã hết hạn sử dụng');
+        return;
+    }
+
+    let g20Offset, g40Offset;
+
+    if(hsd >= 10 && hsd <= 14){ g20Offset = -3; g40Offset = 0; }
+    else if(hsd >= 15 && hsd <= 20){ g20Offset = -5; g40Offset = 0; }
+    else if(hsd > 20){ g20Offset = -5; g40Offset = -3; }
+    else {
+        setResult('Số ngày hạn sử dụng không hợp lệ, hãy kiểm tra lại số ngày hạn sử dụng');
+        return;
+    }
+
+    const ngayGiam20 = addDays(ngayHH, g20Offset);
+    const ngayGiam40 = addDays(ngayHH, g40Offset);
+
+    const kq = `+ Sản phẩm có ngày hết hạn là: ${format(ngayHH)}\n+ Ngày cần giảm giá 20% là: ${format(ngayGiam20)}\n+ Ngày cần giảm giá 40% là: ${format(ngayGiam40)}`;
+
+    setResult(kq);
+}
+
+async function copyResult(){
+    const text = document.getElementById('result').innerText || '';
+    if(!text){ alert('Chưa có kết quả để copy. Vui lòng tính trước.'); return; }
+
+    // Try navigator.clipboard first (may be blocked in sandbox)
+    try{
+        if(navigator && navigator.clipboard && navigator.clipboard.writeText){
+            await navigator.clipboard.writeText(text);
+            temporaryToast('Đã sao chép vào clipboard');
+            return;
+        }
+    }catch(err){
+        // fallthrough to other methods
+        console.warn('navigator.clipboard failed:', err);
+    }
+
+    // Fallback: use a hidden textarea + execCommand
+    try{
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        // Avoid visible scrollbars on mobile
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.focus(); ta.select();
+        const ok = document.execCommand && document.execCommand('copy');
+        document.body.removeChild(ta);
+        if(ok){ temporaryToast('Đã sao chép vào clipboard (fallback)'); return; }
+    }catch(err){ console.warn('execCommand fallback failed:', err); }
+
+    // Last resort: select result content so user can press Ctrl/Cmd+C
+    try{
+        const el = document.getElementById('result');
+        const range = document.createRange();
+        range.selectNodeContents(el);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+        alert('Trình duyệt chặn quyền truy cập clipboard. Kết quả đã được bôi chọn — hãy nhấn Ctrl/Cmd+C để sao chép thủ công.');
+    }catch(e){
+        // If even selection fails, just show the text in prompt as last resort
+        prompt('Trình duyệt chặn quyền truy cập clipboard. Bạn có thể sao chép thủ công từ hộp dưới đây:', text);
+    }
+}
+
+function temporaryToast(msg){
+    const orig = document.getElementById('copyBtn').innerText;
+    const btn = document.getElementById('copyBtn');
+    btn.innerText = msg;
+    setTimeout(()=>{ btn.innerText = orig; }, 2000);
+}
+</script>
+
+</body>
+</html>
