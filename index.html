@@ -23,7 +23,8 @@
 </head>
 <body>
 <div class="container">
-    <h2>VH3 - TÍNH NGÀY GIẢM GIÁ TCNK <br>LƯU Ý! CHỈ ÁP DỤNG CHO TCNK.</h2>
+    <h2>VH3 - TÍNH NGÀY GIẢM GIÁ TCNK</h2>
+    <h3>LƯU Ý! CHỈ ÁP DỤNG CHO TCNK.</h3>
 
     <label>Chọn kiểu nhập liệu:</label>
     <select id="inputType" onchange="showFields()">
@@ -53,9 +54,6 @@
     </div>
 
     <div id="result"></div>
-    <div class="note">Ghi chú: Nếu môi trường (sandbox) chặn quyền truy cập clipboard, nút "Copy kết quả" sẽ cố gắng sao chép bằng nhiều cơ chế. Nếu không thành công, văn bản kết quả sẽ được bôi đậm để bạn có thể dùng Ctrl+C để sao chép thủ công.</div>
-</div>
-
 <script>
 (function(){ showFields(); })();
 
@@ -117,7 +115,7 @@ function tinhToan() {
     // today's date at midnight
     const today = new Date(); today.setHours(0,0,0,0);
     if(ngayHH.getTime() < today.getTime()){
-        setResult('Sản phẩm đã hết hạn sử dụng');
+        setResult('Hết date gòi mẹ');
         return;
     }
 
@@ -141,7 +139,7 @@ function tinhToan() {
 
 async function copyResult(){
     const text = document.getElementById('result').innerText || '';
-    if(!text){ alert('Chưa có kết quả để copy. Vui lòng tính trước.'); return; }
+    if(!text){ alert('Đã tính cái gì đâu mà đòi coppy ><.'); return; }
 
     // Try navigator.clipboard first (may be blocked in sandbox)
     try{
